@@ -14,6 +14,16 @@ import unittest
 
 from cookiecutter import hooks, utils
 
+PY3 = sys.version > '3'
+if PY3:
+    from unittest.mock import patch
+    input_str = 'builtins.input'
+else:
+    import __builtin__
+    from mock import patch
+    input_str = '__builtin__.raw_input'
+    from cStringIO import StringIO
+
 
 class TestFindHooks(unittest.TestCase):
 
@@ -56,11 +66,11 @@ class TestExternalHooks(unittest.TestCase):
 
     def test_run_hook_cwd(self):
         '''Change directory before running hook'''
-        hooks._run_hook(os.path.join(self.hooks_path, 'post_gen_project.sh'), 
+        hooks._run_hook(os.path.join(self.hooks_path, 'post_gen_project.sh'),
                         'tests')
         self.assertTrue(os.path.isfile('tests/shell_post.txt'))
         self.assertFalse('tests' in os.getcwd())
-        
+
     def test_public_run_hook(self):
         '''Execute hook from specified template in specified output directory'''
         tests_dir = os.path.join(self.repo_path, 'input{{hooks}}')
@@ -73,11 +83,27 @@ class TestExternalHooks(unittest.TestCase):
 
     def test_run_hook_with_context(self):
         '''execute a hook script, passing a context'''
-        context = {'cookiecutter':{'file':'shell_post.txt'}}
+        context = {'cookiecutter': {'file': 'shell_post.txt'}}
         shell_script = os.path.join(self.hooks_path, 'post_gen_project_with_context.sh')
         hooks._run_hook(shell_script, 'tests', context)
         self.assertTrue(os.path.isfile('tests/shell_post.txt'))
         self.assertFalse('tests' in os.getcwd())
+
+    def test_run_hook_python_executable(self):
+        with patch('subprocess.Popen') as subprocess:
+            hook_path = os.path.join(self.hooks_path, 'pre_gen_project.py')
+            hooks._run_hook(hook_path)
+            script_path = [sys.executable, hook_path]
+            run_thru_shell = sys.platform.startswith('win')
+            subprocess.assert_called_with(script_path, cwd='.', shell=run_thru_shell)
+
+    def test_run_hook_shell_executable(self):
+        with patch('subprocess.Popen') as subprocess:
+            hook_path = os.path.join(self.hooks_path, 'pre_gen_project.sh')
+            hooks._run_hook(hook_path)
+            script_path = hook_path
+            run_thru_shell = sys.platform.startswith('win')
+            subprocess.assert_called_with(script_path, cwd='.', shell=run_thru_shell)
 
 if __name__ == '__main__':
     unittest.main()
