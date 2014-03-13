@@ -17,13 +17,12 @@ import tempfile
 
 from jinja2 import Template
 
-from .utils import make_sure_path_exists, unicode_open, work_in
-
 _HOOKS = [
     'pre_gen_project',
     'post_gen_project',
     # TODO: other hooks should be listed here
 ]
+
 
 def find_hooks():
     '''
@@ -54,13 +53,13 @@ def _run_hook(script_path, cwd='.', context=None):
     script is first run through jinja template and context passed.
     If context is provided, the script will be run through the jinja templating.
     '''
-<<<<<<< HEAD
+
     if context:
         with open(script_path, 'r') as f:
             content = f.read()
         outfile_tmpl = Template(content)
         output = outfile_tmpl.render(**context)
-        
+
         t = tempfile.NamedTemporaryFile(delete=False, mode='w')
         t.write(output)
         t.close()
@@ -69,12 +68,10 @@ def _run_hook(script_path, cwd='.', context=None):
         st = os.stat(temp_script_path)
         os.chmod(temp_script_path, st.st_mode | stat.S_IEXEC)
         script_path = temp_script_path
-=======
 
     extension = os.path.splitext(script_path)[1]
     if '.py' in extension:
         script_path = [sys.executable, script_path]
->>>>>>> feature_virtualenv_hooks
 
     run_thru_shell = sys.platform.startswith('win')
     proc = subprocess.Popen(
@@ -83,9 +80,10 @@ def _run_hook(script_path, cwd='.', context=None):
         cwd=cwd
     )
     proc.wait()
-    
+
     if context:
         os.remove(temp_script_path)
+
 
 def run_hook(hook_name, project_dir, context={}):
     '''
